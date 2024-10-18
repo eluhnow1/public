@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: black;
+        height: 100vh;
+      }
+      
+      .center-text {
+        font-size: 5rem;
+        color: blue;
+        text-align: center;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        pointer-events: none;
+      }
+      
+      #drawing-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      .tennis-ball {
+        width: 40px;
+        height: 40px;
+        background: radial-gradient(circle at 30% 30%, #e5f977 0%, #dbf22c 50%, #cde020 100%);
+        border-radius: 50%;
+        position: absolute;
+        box-shadow: 0 0 10px rgba(205, 224, 32, 0.5);
+        z-index: 2;
+      }
+
+      #clear-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 3;
+        background-color: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      #clear-button:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="drawing-canvas"></canvas>
+    <div class="center-text">Edwin Luhnow</div>
+    <button id="clear-button">Clear Drawing</button>
+
+    <script>
+      const canvas = document.getElementById('drawing-canvas');
+      const ctx = canvas.getContext('2d');
+      const clearButton = document.getElementById('clear-button');
+      
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+      let lines = [];
+
+      function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = [e.clientX, e.clientY];
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        
+        lines.push({x1: lastX, y1: lastY, x2: e.clientX, y2: e.clientY});
+        
+        [lastX, lastY] = [e.clientX, e.clientY];
+      }
+
+      function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        lines = [];
+      }
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseout', stopDrawing);
+
+      clearButton.addEventListener('click', clearCanvas);
+
+      const BALL_SIZE = 40;
+      const BALL_COUNT = 5;
+      const balls = [];
+
+      class Ball {
+        constructor() {
+          this.element = document.createElement('div');
+          this.element.className = 'tennis-ball';
+          document.body.appendChild(this.element);
+          
+          this.x = Math.random() * (window.innerWidth - BALL_SIZE);
+          this.y = Math.random() * (window.innerHeight - BALL_SIZE);
+          
+          const speed = 2;
+          const angle = Math.random() * Math.PI * 2;
+          this.dx = Math.cos(angle) * speed;
+          this.dy = Math.sin(angle) * speed;
+          
+          this.updatePosition();
+        }
+
+        updatePosition() {
+          this.element.style.left = `${this.x}px`;
+          this.element.style.top = `${this.y}px`;
+        }
+
+        move() {
+          let newX = this.x + this.dx;
+          let newY = this.y + this.dy;
+
+          // Wall collisions
+          if (newX + BALL_SIZE > window.innerWidth || newX < 0) {
+            this.dx = -this.dx;
+            newX = this.x + this.dx;
+          }
+          if (newY + BALL_SIZE > window.innerHeight || newY < 0) {
+            this.dy = -this.dy;
+            newY = this.y + this.dy;
+          }
+
+          // Line collisions
+          for (let line of lines) {
+            if (this.lineCircleCollision(line, newX + BALL_SIZE/2, newY + BALL_SIZE/2, BALL_SIZE/2)) {
+              // Calculate reflection
+              const nx = line.y2 - line.y1;
+              const ny = line.x1 - line.x2;
+              const length = Math.sqrt(nx * nx + ny * ny);
+              const unitNormal = {x: nx / length, y: ny / length};
+              
+              const dotProduct = this.dx * unitNormal.x + this.dy * unitNormal.y;
+              this.dx -= 2 * dotProduct * unitNormal.x;
+              this.dy -= 2 * dotProduct * unitNormal.y;
+              
+              newX = this.x + this.dx;
+              newY = this.y + this.dy;
+              break;
+            }
+          }
+
+          this.x = newX;
+          this.y = newY;
+          this.updatePosition();
+        }
+
+        lineCircleCollision(line, cx, cy, r) {
+          const dx = line.x2 - line.x1;
+          const dy = line.y2 - line.y1;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const dot = ((cx - line.x1) * dx + (cy - line.y1) * dy) / (len * len);
+          const closestX = line.x1 + dot * dx;
+          const closestY = line.y1 + dot * dy;
+          
+          if (dot < 0 || dot > 1) {
+            return false;
+          }
+          
+          const distX = closestX - cx;
+          const distY = closestY - cy;
+          const distance = Math.sqrt(distX * distX + distY * distY);
+          
+          return distance <= r;
+        }
+      }
+
+      for (let i = 0; i < BALL_COUNT; i++) {
+        balls.push(new Ball());
+      }
+
+      function animate() {
+        for (let ball of balls) {
+          ball.move();
+        }
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
