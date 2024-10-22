@@ -24,6 +24,10 @@ body {
     left: 20px;
     color: white;
     font-size: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1;
   }
   
   #back-button {
