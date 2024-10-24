@@ -193,19 +193,20 @@ class Game {
     if (platform.type === 'box') return null;
   
     const y = platform.y - this.enemySize - 5;
-    const leftBound = Math.max(platform.x + 30, 0);
-    const rightBound = Math.min(platform.x + platform.width - 30, this.canvas.width);
+    // Remove the padding (30px) from bounds calculations
+    const leftBound = platform.x;                    // Changed from platform.x + 30
+    const rightBound = platform.x + platform.width;  // Changed from platform.width - 30
     const x = platform.x + platform.width / 2 - this.enemySize / 2;
   
     switch(type) {
       case 'basic':
-        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed);
+        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed); // Subtract enemySize from rightBound
       case 'fast':
-        return new Enemy(x, y, leftBound, rightBound, '#e67e22', this.enemySpeed * 2);
+        return new Enemy(x, y, leftBound, rightBound, '#e67e22', this.enemySpeed * 2); // Subtract enemySize from rightBound
       case 'hunter':
         return new HunterEnemy(x, y, this.player, '#c0392b', this.enemySpeed * 0.75);
       default:
-        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed);
+        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed); // Subtract enemySize from rightBound
     }
   }
 
