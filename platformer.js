@@ -26,10 +26,11 @@ class Game {
     this.coinImage.src = 'coin.png';
 
     this.heartImage = new Image();
-    this.heartImage.src = 'heart.png';  // Make sure to have this image
+    this.heartImage.src = 'heart.png';
     this.hearts = [];
-    this.enemySize = 40;  // Increased from 30
-    this.enemySpeed = 1.5;  // Reduced from 2
+    this.enemySize = 40;
+    this.enemySpeed = 1.5;
+    this.coinSize = 30; 
     
     this.player = new Player(this);
     this.platforms = [];
@@ -132,25 +133,44 @@ class Game {
 
   findValidCoinPosition() {
     const JUMP_HEIGHT = 200;
-    const PLATFORM_MARGIN = 30;
+    const PLATFORM_MARGIN = 15;  // Reduced from 30 to spawn closer to platforms
     let attempts = 0;
     const MAX_ATTEMPTS = 100;
-
+  
     while (attempts < MAX_ATTEMPTS) {
       const platformIndex = Math.floor(Math.random() * (this.platforms.length - 1)) + 1;
       const platform = this.platforms[platformIndex];
       
-      const coinX = platform.x + Math.random() * (platform.width - 20);
-      const coinY = platform.y - PLATFORM_MARGIN - 20;
+      // Skip box platforms
+      if (platform.type === 'box') {
+        attempts++;
+        continue;
+      }
+      
+      const coinX = platform.x + Math.random() * (platform.width - this.coinSize);
+      const coinY = platform.y - PLATFORM_MARGIN - this.coinSize;
+      
+      // Check if a heart is already near this position
+      const heartNearby = this.hearts.some(heart => {
+        const dx = heart.x - coinX;
+        const dy = heart.y - coinY;
+        return Math.sqrt(dx * dx + dy * dy) < 50;  // 50px minimum distance
+      });
+  
+      if (heartNearby) {
+        attempts++;
+        continue;
+      }
       
       const isReachable = this.platforms.some(p => {
         if (p === platform) return false;
         
         const verticalDist = p.y - coinY;
-        const horizontalOverlap = coinX + 20 >= p.x - 50 && coinX <= p.x + p.width + 50;
+        const horizontalOverlap = coinX + this.coinSize >= p.x - 50 && 
+                                 coinX <= p.x + p.width + 50;
         return verticalDist > -JUMP_HEIGHT && verticalDist < 0 && horizontalOverlap;
       });
-
+  
       if (isReachable) {
         return { x: coinX, y: coinY };
       }
@@ -159,7 +179,10 @@ class Game {
     }
     
     const platform = this.platforms[1];
-    return { x: platform.x + platform.width/2, y: platform.y - PLATFORM_MARGIN - 20 };
+    return { 
+      x: platform.x + platform.width/2, 
+      y: platform.y - PLATFORM_MARGIN - this.coinSize 
+    };
   }
 
   createEnemyByType(type, platform) {
@@ -187,15 +210,44 @@ class Game {
   }
 
   spawnHeart() {
-    if (this.hearts.length >= 2) return; // Limit number of hearts on screen
+    if (this.hearts.length >= 2) return;
     
-    const pos = this.findValidCoinPosition(); // Reuse coin positioning logic
-    this.hearts.push({
-      x: pos.x,
-      y: pos.y,
-      width: 25,
-      height: 25
-    });
+    const PLATFORM_MARGIN = 15;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 100;
+  
+    while (attempts < MAX_ATTEMPTS) {
+      const platformIndex = Math.floor(Math.random() * (this.platforms.length - 1)) + 1;
+      const platform = this.platforms[platformIndex];
+      
+      // Skip box platforms
+      if (platform.type === 'box') {
+        attempts++;
+        continue;
+      }
+  
+      const heartX = platform.x + Math.random() * (platform.width - 25);
+      const heartY = platform.y - PLATFORM_MARGIN - 25;
+  
+      // Check if any coins are near this position
+      const coinNearby = this.coins.some(coin => {
+        const dx = coin.x - heartX;
+        const dy = coin.y - heartY;
+        return Math.sqrt(dx * dx + dy * dy) < 50;  // 50px minimum distance
+      });
+  
+      if (!coinNearby) {
+        this.hearts.push({
+          x: heartX,
+          y: heartY,
+          width: 25,
+          height: 25
+        });
+        break;
+      }
+      
+      attempts++;
+    }
   }
 
   initLevel() {
@@ -209,11 +261,12 @@ class Game {
     const coinCount = 5 + Math.floor(this.level / 2);
     for (let i = 0; i < coinCount; i++) {
       const pos = this.findValidCoinPosition();
-      this.coins.push(new Coin(pos.x, pos.y));
+      this.coins.push(new Coin(pos.x, pos.y, this.coinSize, this.coinSize));  // Pass size to Coin constructor
     }
     
+    // Spawn enemies only on valid platforms
     this.platforms.slice(1).forEach((platform) => {
-      if (platform.type === 'ground') return;
+      if (platform.type === 'ground' || platform.type === 'box') return;  // Skip ground and box platforms
       if (Math.random() > 0.7) return;
       
       const enemyTypes = ['basic'];
@@ -230,7 +283,7 @@ class Game {
       const enemy = this.createEnemyByType(type, platform);
       if (enemy) this.enemies.push(enemy);
     });
-
+  
     // Chance to spawn heart if player has less than full health
     if (this.lives < 3 && Math.random() < 0.3) {
       this.spawnHeart();
