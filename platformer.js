@@ -22,6 +22,8 @@ class Game {
     
     this.enemyImage = new Image();
     this.enemyImage.src = 'alien.png';
+    this.ufoImage = new Image();
+    this.ufoImage.src = 'ufo.png';
     this.coinImage = new Image();
     this.coinImage.src = 'coin.png';
 
@@ -38,6 +40,8 @@ class Game {
     this.enemies = [];
     
     this.keys = {};
+    this.lastTime = 0;
+    this.frameRate = 1000/60;
     
     this.setupEventListeners();
     this.initLevel();
@@ -186,22 +190,18 @@ class Game {
   }
 
   createEnemyByType(type, platform) {
-    if (platform.type === 'box') return null;  // Don't spawn enemies on boxes
-
+    if (platform.type === 'box') return null;
+  
     const y = platform.y - this.enemySize - 5;
     const leftBound = Math.max(platform.x + 30, 0);
     const rightBound = Math.min(platform.x + platform.width - 30, this.canvas.width);
     const x = platform.x + platform.width / 2 - this.enemySize / 2;
-
+  
     switch(type) {
       case 'basic':
         return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed);
       case 'fast':
         return new Enemy(x, y, leftBound, rightBound, '#e67e22', this.enemySpeed * 2);
-      case 'vertical':
-        const topBound = Math.max(y - 120, 0);
-        const bottomBound = Math.min(y + 120, platform.y - this.enemySize);
-        return new VerticalEnemy(x, y, topBound, bottomBound, '#9b59b6', this.enemySpeed);
       case 'hunter':
         return new HunterEnemy(x, y, this.player, '#c0392b', this.enemySpeed * 0.75);
       default:
@@ -271,11 +271,10 @@ class Game {
       
       const enemyTypes = ['basic'];
       if (this.level >= 2) enemyTypes.push('fast');
-      if (this.level >= 3) enemyTypes.push('vertical');
       if (this.level >= 4) {
         enemyTypes.push('hunter');
         if (Math.random() < 0.3) {
-          enemyTypes.push('hunter', 'vertical', 'fast');
+          enemyTypes.push('hunter', 'fast');
         }
       }
       
@@ -413,7 +412,8 @@ class Game {
     
     // Draw enemies
     this.enemies.forEach(enemy => {
-      this.ctx.drawImage(this.enemyImage, enemy.x, enemy.y, this.enemySize, this.enemySize);
+      const image = enemy instanceof HunterEnemy ? this.ufoImage : this.enemyImage;
+      this.ctx.drawImage(image, enemy.x, enemy.y, this.enemySize, this.enemySize);
     });
     
     this.player.draw(this.ctx);
@@ -436,6 +436,10 @@ class Player {
     this.dx = 0;
     this.dy = 0;
     this.jumpForce = -15;
+    this.minJumpForce = -10;  // Minimum jump height
+    this.jumpTime = 0;
+    this.maxJumpTime = 30;   // Maximum frames to hold jump
+    this.isJumping = false;
     this.canJump = false;
     this.isInvincible = false;
     this.invincibilityTimer = 0;
@@ -471,42 +475,60 @@ class Player {
 
     this.dy += this.game.gravity;
 
-    if ((this.game.keys['Space'] || this.game.keys['ArrowUp']) && this.canJump) {
-      this.dy = this.jumpForce;
-      this.canJump = false;
+    if ((this.game.keys['Space'] || this.game.keys['ArrowUp'])) {
+      if (this.canJump) {
+        this.dy = this.minJumpForce;
+        this.isJumping = true;
+        this.jumpTime = 0;
+        this.canJump = false;
+      } else if (this.isJumping && this.jumpTime < this.maxJumpTime) {
+        this.dy -= 0.5;  // Continue adding upward force
+        this.jumpTime++;
+      }
+    } else {
+      this.isJumping = false;
     }
+
+    this.dy += this.game.gravity;
 
     let newX = this.x + this.dx;
     let newY = this.y + this.dy;
 
     this.canJump = false;
     this.game.platforms.forEach(platform => {
-      if (this.x + this.width > platform.x && 
-          this.x < platform.x + platform.width) {
-        if (this.dy > 0 && newY + this.height > platform.y && this.y + this.height <= platform.y) {
-          newY = platform.y - this.height;
-          this.dy = 0;
-          this.canJump = true;
-        } else if (this.dy < 0 && newY < platform.y + platform.height && this.y >= platform.y + platform.height) {
-          newY = platform.y + platform.height;
-          this.dy = 0;
-        }
-      }
-      
       if (this.y + this.height > platform.y && 
           this.y < platform.y + platform.height) {
-        if (this.dx > 0 && newX + this.width > platform.x && this.x + this.width <= platform.x) {
+        if (this.dx > 0 && newX + this.width > platform.x && this.x + this.width <= platform.x + 5) {
           newX = platform.x - this.width;
           this.dx = 0;
-        } else if (this.dx < 0 && newX < platform.x + platform.width && this.x >= platform.x + platform.width) {
+        } else if (this.dx < 0 && newX < platform.x + platform.width && this.x >= platform.x + platform.width - 5) {
           newX = platform.x + platform.width;
           this.dx = 0;
         }
       }
     });
 
-    this.x = newX;
+    this.x = newX;  // Update X position first
+
+    // Then handle vertical collisions
+    this.game.platforms.forEach(platform => {
+      if (this.x + this.width > platform.x + 5 && 
+          this.x < platform.x + platform.width - 5) {
+        if (this.dy > 0 && newY + this.height > platform.y && this.y + this.height <= platform.y) {
+          newY = platform.y - this.height;
+          this.dy = 0;
+          this.canJump = true;
+          this.isJumping = false;
+        } else if (this.dy < 0 && newY < platform.y + platform.height && this.y >= platform.y + platform.height) {
+          newY = platform.y + platform.height;
+          this.dy = 0;
+          this.isJumping = false;
+        }
+      }
+    });
+
     this.y = newY;
+    this.x = newX;
 
     if (this.x < 0) {
       this.x = 0;
@@ -566,11 +588,11 @@ class Player {
   }
   
   class Coin {
-    constructor(x, y) {
+    constructor(x, y, width = 30, height = 30) { // Changed from 20 to 30
       this.x = x;
       this.y = y;
-      this.width = 20;
-      this.height = 20;
+      this.width = width;
+      this.height = height;
     }
   }
   
