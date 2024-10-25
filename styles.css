@@ -178,6 +178,25 @@ body {
   text-decoration: none;
 }
 
-#games-button:hover {
+
+#philosophy-button {
+  position: absolute;
+  top: 20px;
+  left: calc(50% + 100px);
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 10px 30px;
+  text-align: center;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-family: 'Montserrat', sans-serif;
+  text-decoration: none;
+  z-index: 4;
+}
+
+#games-button:hover, #philosophy-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }

@@ -1,3 +1,10 @@
+// Replace the import statement with this
+const db = firebase.firestore();
+
+// Settings document reference
+const settingsRef = db.collection('lineSettings').doc('userSettings');
+
+
 // Sound Manager
 const collisionSound = new Audio('pipe.mp3');
 const SOUND_POOL_SIZE = 5;
@@ -17,9 +24,54 @@ function playCollisionSound() {
   }
 }
 
-// Drawing settings
+// Drawing settings with default values
 let currentColor = '#FFFFFF';
 let lineWidth = 2;
+
+
+// Function to save settings to Firestore
+async function saveSettings() {
+  try {
+    await settingsRef.set({
+      color: currentColor,
+      width: lineWidth
+    });
+  } catch (error) {
+    console.error("Error saving settings:", error);
+  }
+}
+
+// Function to load settings from Firestore
+async function loadSettings() {
+  try {
+    const doc = await settingsRef.get();
+    if (doc.exists) {
+      const data = doc.data();
+      currentColor = data.color;
+      lineWidth = data.width;
+      updateUISettings();
+    }
+  } catch (error) {
+    console.error("Error loading settings:", error);
+  }
+}
+
+// Function to update UI based on loaded settings
+function updateUISettings() {
+  document.querySelectorAll('.color-button').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.style.backgroundColor === currentColor) {
+      btn.classList.add('active');
+    }
+  });
+  
+  const widthSlider = document.getElementById('line-width-slider');
+  const currentWidthDisplay = document.getElementById('current-width');
+  if (widthSlider && currentWidthDisplay) {
+    widthSlider.value = lineWidth;
+    currentWidthDisplay.textContent = lineWidth;
+  }
+}
 
 // Create controls
 const controlsContainer = document.createElement('div');
@@ -42,6 +94,7 @@ colors.forEach(color => {
     document.querySelectorAll('.color-button').forEach(btn => btn.classList.remove('active'));
     button.classList.add('active');
     currentColor = color;
+    saveSettings(); // Save when color changes
   });
   colorGroup.appendChild(button);
 });
@@ -68,6 +121,7 @@ currentWidthDisplay.textContent = lineWidth;
 widthSlider.addEventListener('input', (e) => {
   lineWidth = parseInt(e.target.value);
   currentWidthDisplay.textContent = lineWidth;
+  saveSettings(); // Save when width changes
 });
 
 widthGroup.appendChild(widthSlider);
@@ -77,6 +131,9 @@ widthGroup.appendChild(currentWidthDisplay);
 controlsContainer.appendChild(colorGroup);
 controlsContainer.appendChild(widthGroup);
 document.body.appendChild(controlsContainer);
+
+// Load settings when page loads
+document.addEventListener('DOMContentLoaded', loadSettings);
 
 const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');

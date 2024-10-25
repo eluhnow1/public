@@ -3,6 +3,22 @@
   <head>
     <title>Platformer Game</title>
     <link rel="stylesheet" href="platformer-styles.css">
+    <!-- Add Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <!-- Initialize Firebase -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyA_P6OA3XWf5qC_ODuWzVzco6XW41U49iA",
+        authDomain: "sigmaturtle-971bc.firebaseapp.com",
+        projectId: "sigmaturtle-971bc",
+        storageBucket: "sigmaturtle-971bc.appspot.com",
+        messagingSenderId: "808481283473",
+        appId: "1:808481283473:web:0fa4f9d38a922bb841ce30"
+      };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+    </script>
   </head>
   <body>
     <div id="game-container">
@@ -12,8 +28,20 @@
         <div id="lives">Lives: 3</div>
         <div id="level">Level: 1</div>
       </div>
+      <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <div id="leaderboard-entries"></div>
+      </div>
+      <div id="name-input-modal" class="modal">
+        <div class="modal-content">
+          <h2>New High Score!</h2>
+          <p>Enter your name for the leaderboard:</p>
+          <input type="text" id="player-name" maxlength="20">
+          <button id="submit-name">Submit</button>
+        </div>
+      </div>
       <button id="back-button" onclick="window.location.href='index.html'">Back to Home</button>
     </div>
-    <script src="platformer.js"></script>  <!-- Changed from script.js to platformer.js -->
+    <script src="platformer.js"></script>
   </body>
 </html>

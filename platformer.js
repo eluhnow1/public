@@ -1,3 +1,5 @@
+// Initialize Firestore
+const db = firebase.firestore();
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -46,6 +48,9 @@ class Game {
     this.setupEventListeners();
     this.initLevel();
     this.gameLoop();
+    this.playerName = localStorage.getItem('platformerPlayerName') || null;
+    this.highestLevel = 1;
+    this.loadLeaderboard();
   }
 
   setupEventListeners() {
@@ -335,6 +340,7 @@ class Game {
       this.player.dx = 0;
       this.player.dy = 0;
       this.initLevel();
+      this.updateLeaderboard();  // Add this line
     }
   }
 
@@ -424,6 +430,79 @@ class Game {
     this.update();
     this.draw();
     requestAnimationFrame(() => this.gameLoop());
+  }
+
+  async loadLeaderboard() {
+    try {
+      const snapshot = await db.collection('leaderboard')
+        .orderBy('level', 'desc')
+        .limit(10)
+        .get();
+
+      const leaderboardDiv = document.getElementById('leaderboard-entries');
+      leaderboardDiv.innerHTML = '';
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const entry = document.createElement('div');
+        entry.className = 'leaderboard-entry';
+        entry.innerHTML = `
+          <span>${data.name}</span>
+          <span>Level ${data.level}</span>
+        `;
+        leaderboardDiv.appendChild(entry);
+      });
+    } catch (error) {
+      console.error("Error loading leaderboard:", error);
+    }
+  }
+
+  async updateLeaderboard() {
+    console.log("Updating leaderboard. Current level:", this.level, "Highest level:", this.highestLevel);
+    if (this.level > this.highestLevel) {
+      console.log("New high score!");
+      this.highestLevel = this.level;
+      
+      if (!this.playerName) {
+        // Show name input modal
+        const modal = document.getElementById('name-input-modal');
+        modal.style.display = 'block';
+        
+        const submitButton = document.getElementById('submit-name');
+        const nameInput = document.getElementById('player-name');
+        
+        submitButton.onclick = async () => {
+          const name = nameInput.value.trim();
+          if (name) {
+            this.playerName = name;
+            localStorage.setItem('platformerPlayerName', name);
+            modal.style.display = 'none';
+            await this.saveScore();
+          }
+        };
+      } else {
+        await this.saveScore();
+      }
+    }
+  }
+
+  async saveScore() {
+    try {
+      console.log("Saving score for player:", this.playerName, "Level:", this.level);
+      const docRef = db.collection('leaderboard').doc(this.playerName);
+      const docSnap = await docRef.get();
+      
+      if (!docSnap.exists || docSnap.data().level < this.level) {
+        await docRef.set({
+          name: this.playerName,
+          level: this.level
+        });
+        console.log("Score saved successfully");
+        this.loadLeaderboard(); // Refresh leaderboard display
+      }
+    } catch (error) {
+      console.error("Error saving score:", error);
+    }
   }
 }
   
