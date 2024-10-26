@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trolley Problems</title>
     <link rel="stylesheet" href="philosophy.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="container">
@@ -21,7 +23,32 @@
             <button id="do-nothing">Do Nothing</button>
             <button id="pull-lever">Pull the Lever</button>
         </div>
+        <div id="stats" class="stats-container">
+            <div class="stat-bar">
+                <span class="stat-label">Do Nothing:</span>
+                <div class="stat-bar-fill" id="do-nothing-stat"></div>
+                <span class="stat-percentage" id="do-nothing-percent">0%</span>
+            </div>
+            <div class="stat-bar">
+                <span class="stat-label">Pull Lever:</span>
+                <div class="stat-bar-fill" id="pull-lever-stat"></div>
+                <span class="stat-percentage" id="pull-lever-percent">0%</span>
+            </div>
+        </div>
+        <button id="next-button" disabled>Next Problem →</button>
     </div>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_P6OA3XWf5qC_ODuWzVzco6XW41U49iA",
+            authDomain: "sigmaturtle-971bc.firebaseapp.com",
+            projectId: "sigmaturtle-971bc",
+            storageBucket: "sigmaturtle-971bc.appspot.com",
+            messagingSenderId: "808481283473",
+            appId: "1:808481283473:web:0fa4f9d38a922bb841ce30"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
     <script src="philosophy.js"></script>
 </body>
 </html>

@@ -44,9 +44,31 @@ h1 {
 #top-target {
     top: 5%;
 }
+
+/* Specific image sizing */
 #top-target img[src*="oneguy"] {
     width: 80px;
-    
+}
+
+
+
+/* Regular size for other images */
+#top-target img[src*="doctor"],
+#top-target img[src*="yourself"],
+#top-target img[src*="shrek"],
+#top-target img[src*="trolleythinker"],
+#top-target img[src*="scientist"],
+#top-target img[src*="sockman"],
+#bottom-target img[src*="puppy"],
+#bottom-target img[src*="thinker"],
+#bottom-target img[src*="engineer"],
+#bottom-target img[src*="embarrassing"],
+#top-target img[src*="heapnew"],
+#bottom-target img[src*="heapold"],
+#top-target img[src*="schrodinger"] {
+    width: 100px;
+    max-height: 100px;
+    object-fit: contain;
 }
 
 #bottom-target {
@@ -72,4 +94,63 @@ button {
 
 button:hover {
     background-color: #eee;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#next-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+}
+
+#next-button:disabled {
+    opacity: 0.5;
+}
+.stats-container {
+    margin: 20px auto;
+    max-width: 600px;
+    display: none;
+}
+
+.stat-bar {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stat-label {
+    width: 100px;
+    text-align: right;
+}
+
+.stat-bar-fill {
+    flex-grow: 1;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    --width: 0%;
+}
+
+.stat-bar-fill::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: var(--width);
+    background-color: #4CAF50;
+    transition: width 0.5s ease-in-out;
+    border-radius: 10px;
+}
+
+.stat-percentage {
+    width: 60px;
+    text-align: left;
 }

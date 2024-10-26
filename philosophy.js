@@ -22,17 +22,6 @@ const problems = [
         }
     },
     {
-        question: "There is a trolley barreling down the tracks toward five people. You can pull a lever to divert it to another track, but doing so will kill a woman pregnant with triplets. What do you do?",
-        topTarget: {
-            src: "philosophy-assets/pregnant.png",
-            alt: "Pregnant Woman"
-        },
-        bottomTarget: {
-            src: "philosophy-assets/fiveguys.svg",
-            alt: "Five people"
-        }
-    },
-    {
         question: "There is a trolley barreling down the tracks toward five people. You can pull a lever to divert it to another track, but doing so will kill a young doctor who will save 100 people in his life. What do you do?",
         topTarget: {
             src: "philosophy-assets/doctor.png",
@@ -121,7 +110,7 @@ const problems = [
         }
     },
     {
-        question: "There is a trolley barreling down the tracks toward an engineer developing the perfect printer that never breaks. You can pull a lever to divert it to another track, but doing so will kill a scientist who has foudn the cure for the common cold. What do you do?",
+        question: "There is a trolley barreling down the tracks toward an engineer developing the perfect printer that never breaks. You can pull a lever to divert it to another track, but doing so will kill a scientist who has found the cure for the common cold. What do you do?",
         topTarget: {
             src: "philosophy-assets/scientist.png",
             alt: "A Scientist"
@@ -145,6 +134,46 @@ const problems = [
 ];
 
 let currentProblem = 0;
+let hasAnswered = false;
+
+async function updateStats(problemIndex, choice) {
+    const docRef = db.collection('trolleyProblems').doc(problemIndex.toString());
+    
+    // Get current stats or initialize if doesn't exist
+    const doc = await docRef.get();
+    let stats;
+    if (doc.exists) {
+        stats = doc.data();
+        stats[choice]++;
+        stats.total++;
+    } else {
+        stats = {
+            doNothing: 0,
+            pullLever: 0,
+            total: 1
+        };
+        stats[choice] = 1;
+    }
+    
+    // Update database
+    await docRef.set(stats);
+    
+    // Display stats
+    const doNothingPercent = Math.round((stats.doNothing / stats.total) * 100);
+    const pullLeverPercent = Math.round((stats.pullLever / stats.total) * 100);
+    
+    // Update the width of the fill
+    const doNothingFill = document.getElementById('do-nothing-stat');
+    const pullLeverFill = document.getElementById('pull-lever-stat');
+    doNothingFill.style.setProperty('--width', `${doNothingPercent}%`);
+    pullLeverFill.style.setProperty('--width', `${pullLeverPercent}%`);
+    
+    document.getElementById('do-nothing-percent').textContent = `${doNothingPercent}%`;
+    document.getElementById('pull-lever-percent').textContent = `${pullLeverPercent}%`;
+    
+    // Show stats container
+    document.querySelector('.stats-container').style.display = 'block';
+}
 
 function displayProblem(index) {
     const problem = problems[index];
@@ -170,6 +199,15 @@ function displayProblem(index) {
     bottomImg.src = problem.bottomTarget.src;
     bottomImg.alt = problem.bottomTarget.alt;
     bottomTarget.appendChild(bottomImg);
+    
+    // Reset state
+    hasAnswered = false;
+    document.getElementById('next-button').disabled = true;
+    document.getElementById('do-nothing').disabled = false;
+    document.getElementById('pull-lever').disabled = false;
+    
+    // Hide stats container for new problem
+    document.querySelector('.stats-container').style.display = 'none';
 }
 
 function showSplatEffect(isLeverPulled) {
@@ -187,10 +225,12 @@ function showSplatEffect(isLeverPulled) {
     targetElement.appendChild(splatImg);
 }
 
-function handleChoice(event) {
-    // Disable buttons to prevent multiple clicks
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(button => button.disabled = true);
+async function handleChoice(event) {
+    if (hasAnswered) return;
+    
+    // Disable choice buttons
+    document.getElementById('do-nothing').disabled = true;
+    document.getElementById('pull-lever').disabled = true;
     
     // Determine if lever was pulled
     const isLeverPulled = event.target.id === 'pull-lever';
@@ -198,23 +238,29 @@ function handleChoice(event) {
     // Show splat effect
     showSplatEffect(isLeverPulled);
     
-    // Wait 3 seconds before moving to next problem
-    setTimeout(() => {
-        currentProblem++;
-        if (currentProblem < problems.length) {
-            displayProblem(currentProblem);
-            // Re-enable buttons
-            buttons.forEach(button => button.disabled = false);
-        } else {
-            // Handle end of problems
-            document.querySelector('.container').innerHTML = '<h1>Thank you for participating!</h1>';
-        }
-    }, 3000);
+    // Update stats in Firebase
+    const choice = isLeverPulled ? 'pullLever' : 'doNothing';
+    await updateStats(currentProblem, choice);
+    
+    // Enable next button
+    document.getElementById('next-button').disabled = false;
+    hasAnswered = true;
+}
+
+function handleNext() {
+    currentProblem++;
+    if (currentProblem < problems.length) {
+        displayProblem(currentProblem);
+    } else {
+        // Handle end of problems
+        document.querySelector('.container').innerHTML = '<h1>Thank you for participating!</h1>';
+    }
 }
 
 // Event listeners
 document.getElementById('do-nothing').addEventListener('click', handleChoice);
 document.getElementById('pull-lever').addEventListener('click', handleChoice);
+document.getElementById('next-button').addEventListener('click', handleNext);
 
 // Initialize first problem
 displayProblem(0);
