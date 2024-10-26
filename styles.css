@@ -160,10 +160,12 @@ body {
 
 /* Add this to your existing styles.css */
 
+/* Update only the relevant button styles, rest of CSS remains the same */
+
 #games-button {
   position: absolute;
   top: 20px;
-  left: 50%;
+  left: calc(50% - 100px); /* Moved left by adjusting the calculation */
   transform: translateX(-50%);
   z-index: 4;
   background-color: rgba(255, 255, 255, 0.2);
@@ -178,11 +180,10 @@ body {
   text-decoration: none;
 }
 
-
 #philosophy-button {
   position: absolute;
   top: 20px;
-  left: calc(50% + 100px);
+  left: calc(50% + 100px); /* Moved right by adjusting the calculation */
   transform: translateX(-50%);
   background-color: rgba(255, 255, 255, 0.2);
   border: none;
