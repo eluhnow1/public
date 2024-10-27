@@ -51,6 +51,13 @@ class Game {
     this.playerName = localStorage.getItem('platformerPlayerName') || null;
     this.highestLevel = 1;
     this.loadLeaderboard();
+    const toggleButton = document.getElementById('toggle-leaderboard');
+    const leaderboardEntries = document.getElementById('leaderboard-entries');
+  
+    toggleButton.addEventListener('click', () => {
+      leaderboardEntries.classList.toggle('collapsed');
+      toggleButton.classList.toggle('collapsed');
+    });
   }
 
   setupEventListeners() {

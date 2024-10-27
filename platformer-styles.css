@@ -83,6 +83,35 @@ body {
   font-size: 14px;
 }
 
+.leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+#toggle-leaderboard {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 5px;
+  transition: transform 0.3s;
+}
+
+#toggle-leaderboard:hover {
+  opacity: 0.8;
+}
+
+#toggle-leaderboard.collapsed {
+  transform: rotate(-90deg);
+}
+
+#leaderboard-entries.collapsed {
+  display: none;
+}
+
 .modal {
   display: none;
   position: fixed;
