@@ -601,3 +601,85 @@ function animateParticles() {
 
 initParticles();
 animateParticles();
+
+// Add this after your other event listeners
+const addAsteroidButton = document.getElementById('add-asteroid-button');
+addAsteroidButton.addEventListener('click', () => {
+    // Function to find a valid position
+    function findValidPosition() {
+        for (let attempts = 0; attempts < 100; attempts++) {
+            // Try to find a position
+            const x = Math.random() * (window.innerWidth - ASTEROID_SIZE);
+            const y = Math.random() * (window.innerHeight - ASTEROID_SIZE);
+            
+            // Check for overlap with other asteroids
+            let overlapping = false;
+            for (let asteroid of asteroids) {
+                const dx = x - asteroid.x;
+                const dy = y - asteroid.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < ASTEROID_SIZE * 1.5) {
+                    overlapping = true;
+                    break;
+                }
+            }
+            
+            // Check for overlap with lines
+            let nearLines = false;
+            for (let line of lines) {
+                const centerX = x + ASTEROID_SIZE/2;
+                const centerY = y + ASTEROID_SIZE/2;
+                const distance = linePointDistance(
+                    line.x1, line.y1, 
+                    line.x2, line.y2, 
+                    centerX, centerY
+                );
+                if (distance < ASTEROID_SIZE) {
+                    nearLines = true;
+                    break;
+                }
+            }
+            
+            if (!overlapping && !nearLines) {
+                return { x, y };
+            }
+        }
+        return null;
+    }
+    
+    // Helper function to calculate distance from point to line
+    function linePointDistance(x1, y1, x2, y2, px, py) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len === 0) return Math.sqrt((px-x1)*(px-x1) + (py-y1)*(py-y1));
+        
+        const t = ((px - x1) * dx + (py - y1) * dy) / (len * len);
+        if (t < 0) return Math.sqrt((px-x1)*(px-x1) + (py-y1)*(py-y1));
+        if (t > 1) return Math.sqrt((px-x2)*(px-x2) + (py-y2)*(py-y2));
+        
+        const nearestX = x1 + t * dx;
+        const nearestY = y1 + t * dy;
+        return Math.sqrt((px-nearestX)*(px-nearestX) + (py-nearestY)*(py-nearestY));
+    }
+    
+    // Try to add a new asteroid
+    const position = findValidPosition();
+    if (position) {
+        const asteroid = new Asteroid();
+        asteroid.x = position.x;
+        asteroid.y = position.y;
+        asteroid.updatePosition();
+        asteroids.push(asteroid);
+    }
+});
+
+const removeAsteroidButton = document.getElementById('remove-asteroid-button');
+removeAsteroidButton.addEventListener('click', () => {
+    if (asteroids.length > 0) {
+        // Remove the last asteroid from the array
+        const removedAsteroid = asteroids.pop();
+        // Remove its DOM element
+        removedAsteroid.element.remove();
+    }
+});
