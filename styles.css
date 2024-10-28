@@ -37,6 +37,10 @@ body {
   background-image: url('asteroid.png');
   background-size: cover;
   transform-origin: center center;
+  cursor:grab;
+}
+.asteroid:active {
+  cursor: grabbing;
 }
 
 #clear-button {

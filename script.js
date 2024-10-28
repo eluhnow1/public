@@ -71,6 +71,26 @@ function createExplosion(x, y, velocity) {
   }
 }
 
+//screen shake
+let screenShakeTime = 0;
+let screenShakeIntensity = 0;
+
+function startScreenShake(intensity = 5, duration = 200) {
+    screenShakeTime = duration;
+    screenShakeIntensity = intensity;
+}
+
+function applyScreenShake() {
+    if (screenShakeTime > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShakeIntensity;
+        const shakeY = (Math.random() - 0.5) * screenShakeIntensity;
+        document.body.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+        screenShakeTime -= 16.67; // Roughly 60fps
+    } else {
+        document.body.style.transform = 'translate(0px, 0px)';
+    }
+}
+
 // Drawing settings with default values
 let currentColor = '#FFFFFF';
 let lineWidth = 2;
@@ -255,6 +275,10 @@ class Asteroid {
     this.element = document.createElement('div');
     this.element.className = 'asteroid';
     document.body.appendChild(this.element);
+    this.isDragging = false;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.setupDragging();
     
     do {
       this.x = Math.random() * (window.innerWidth - ASTEROID_SIZE);
@@ -292,6 +316,7 @@ class Asteroid {
   }
 
   move() {
+    if (this.isDragging) return;
     let newX = this.x + this.dx;
     let newY = this.y + this.dy;
     let collisionOccurred = false;
@@ -402,22 +427,81 @@ class Asteroid {
   }
 
   lineCircleCollision(line, cx, cy, r) {
-    const dx = line.x2 - line.x1;
-    const dy = line.y2 - line.y1;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const dot = ((cx - line.x1) * dx + (cy - line.y1) * dy) / (len * len);
-    const closestX = line.x1 + dot * dx;
-    const closestY = line.y1 + dot * dy;
+    // Vector from line start to circle center
+    const ac = {
+        x: cx - line.x1,
+        y: cy - line.y1
+    };
     
-    if (dot < 0 || dot > 1) {
-      return false;
+    // Vector from line start to line end
+    const ab = {
+        x: line.x2 - line.x1,
+        y: line.y2 - line.y1
+    };
+    
+    // Length of line segment
+    const lineLength = Math.sqrt(ab.x * ab.x + ab.y * ab.y);
+    if (lineLength === 0) return false;
+    
+    // Normalize the line vector
+    const unitLine = {
+        x: ab.x / lineLength,
+        y: ab.y / lineLength
+    };
+    
+    // Project circle center onto line using dot product
+    const projection = ac.x * unitLine.x + ac.y * unitLine.y;
+    
+    // Find the closest point on the line
+    let closest;
+    if (projection <= 0) {
+        closest = { x: line.x1, y: line.y1 };
+    } else if (projection >= lineLength) {
+        closest = { x: line.x2, y: line.y2 };
+    } else {
+        closest = {
+            x: line.x1 + unitLine.x * projection,
+            y: line.y1 + unitLine.y * projection
+        };
     }
     
-    const distX = closestX - cx;
-    const distY = closestY - cy;
-    const distance = Math.sqrt(distX * distX + distY * distY);
+    // Check if the closest point is within radius
+    const dx = cx - closest.x;
+    const dy = cy - closest.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
     
     return distance <= r;
+}
+
+  setupDragging() {
+    this.element.addEventListener('mousedown', (e) => {
+        this.isDragging = true;
+        this.dragOffsetX = e.clientX - this.x;
+        this.dragOffsetY = e.clientY - this.y;
+        
+        // Store original velocity
+        this.originalDx = this.dx;
+        this.originalDy = this.dy;
+        this.dx = 0;
+        this.dy = 0;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (this.isDragging) {
+            this.x = e.clientX - this.dragOffsetX;
+            this.y = e.clientY - this.dragOffsetY;
+            this.updatePosition();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (this.isDragging) {
+            this.isDragging = false;
+            // Restore original velocity
+            this.dx = this.originalDx;
+            this.dy = this.originalDy;
+        }
+    });
   }
 }
 
@@ -428,6 +512,9 @@ for (let i = 0; i < ASTEROID_COUNT; i++) {
 function animateAsteroids() {
   trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
   
+  // Apply screen shake
+  applyScreenShake();
+  
   // Update and draw explosion particles
   explosionParticles = explosionParticles.filter(particle => {
       if (particle.update()) {
@@ -437,7 +524,6 @@ function animateAsteroids() {
       return false;
   });
   
-  // Existing asteroid animation code
   for (let asteroid of asteroids) {
       asteroid.move();
       asteroid.drawTrail();
