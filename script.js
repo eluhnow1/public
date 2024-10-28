@@ -6,21 +6,68 @@ const settingsRef = db.collection('lineSettings').doc('userSettings');
 
 
 // Sound Manager
-const collisionSound = new Audio('pipe.mp3');
+const collisionSound = new Audio('boom.mp3');
 const SOUND_POOL_SIZE = 5;
 const soundPool = Array.from({ length: SOUND_POOL_SIZE }, () => {
-  const audio = new Audio('pipe.mp3');
+  const audio = new Audio('boom.mp3');
   audio.volume = 0.3;
   return audio;
 });
 let currentSound = 0;
 
 function playCollisionSound() {
-  // 5% chance to play sound
-  if (Math.random() < 0.05) {
     soundPool[currentSound].currentTime = 0;
     soundPool[currentSound].play();
     currentSound = (currentSound + 1) % SOUND_POOL_SIZE;
+}
+
+// Particle explosion system
+class ExplosionParticle {
+  constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      const speed = Math.random() * 8 + 2; // Particles shoot out at different speeds
+      const angle = Math.random() * Math.PI * 2; // Random directions
+      this.dx = Math.cos(angle) * speed;
+      this.dy = Math.sin(angle) * speed;
+      this.life = 1.0; // Start at full life
+      this.color = color || `hsl(${Math.random() * 60 + 15}, 100%, 60%)`; // Orange/yellow range
+      this.size = Math.random() * 4 + 2;
+  }
+
+  update() {
+      this.x += this.dx;
+      this.dy += 0.2; // Gravity effect
+      this.y += this.dy;
+      this.life -= 0.02; // Fade out
+      this.size *= 0.96; // Shrink
+      return this.life > 0;
+  }
+
+  draw(ctx) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color.replace('1.0', this.life);
+      ctx.fill();
+      
+      // Optional: Add glow effect
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = this.color.replace('1.0', this.life * 0.5);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+  }
+}
+
+// Add to your global variables
+let explosionParticles = [];
+
+// Add this function to create explosions
+function createExplosion(x, y, velocity) {
+  const particleCount = Math.floor(Math.abs(velocity) * 5) + 20; // More particles for faster collisions
+  const baseColor = `hsla(${Math.random() * 60 + 15}, 100%, 60%,`; // Base color for this explosion
+  
+  for (let i = 0; i < particleCount; i++) {
+      explosionParticles.push(new ExplosionParticle(x, y, baseColor + '1.0)'));
   }
 }
 
@@ -292,6 +339,7 @@ class Asteroid {
         const sin = Math.sin(angle);
         const cos = Math.cos(angle);
 
+
         // Rotate velocities
         const vx1 = this.dx * cos + this.dy * sin;
         const vy1 = this.dy * cos - this.dx * sin;
@@ -310,16 +358,24 @@ class Asteroid {
         asteroid.y -= overlap * sin / 2;
         asteroid.updatePosition();
         asteroid.updateRotation();
+        const collisionSpeed = Math.sqrt(
+          Math.pow(this.dx - asteroid.dx, 2) + 
+          Math.pow(this.dy - asteroid.dy, 2)
+        );
+      
+        // Create explosion at collision point
+        createExplosion(
+            (this.x + asteroid.x) / 2 + ASTEROID_SIZE/2,
+            (this.y + asteroid.y) / 2 + ASTEROID_SIZE/2,
+            collisionSpeed
+        );
         collisionOccurred = true;
+        playCollisionSound();
         break;
       }
     }
 
-    // Play sound if collision occurred
-    if (collisionOccurred) {
-      playCollisionSound();
-    }
-
+  
     this.trail.unshift({ x: this.x + ASTEROID_SIZE / 2, y: this.y + ASTEROID_SIZE / 2, life: 60 });
     if (this.trail.length > 60) {
       this.trail.pop();
@@ -371,10 +427,22 @@ for (let i = 0; i < ASTEROID_COUNT; i++) {
 
 function animateAsteroids() {
   trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  
+  // Update and draw explosion particles
+  explosionParticles = explosionParticles.filter(particle => {
+      if (particle.update()) {
+          particle.draw(trailCtx);
+          return true;
+      }
+      return false;
+  });
+  
+  // Existing asteroid animation code
   for (let asteroid of asteroids) {
-    asteroid.move();
-    asteroid.drawTrail();
+      asteroid.move();
+      asteroid.drawTrail();
   }
+  
   requestAnimationFrame(animateAsteroids);
 }
 
@@ -443,6 +511,7 @@ function animateParticles() {
   }
   requestAnimationFrame(animateParticles);
 }
+
 
 initParticles();
 animateParticles();

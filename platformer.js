@@ -1,5 +1,40 @@
 // Initialize Firestore
 const db = firebase.firestore();
+
+// Sound Manager for all sounds
+const collisionSound = new Audio('boop.mp3');
+const jumpSound = new Audio('jump.mp3');
+const deathSound = new Audio('death.mp3');
+const hitSound = new Audio('ahh.mp3');
+
+const SOUND_POOL_SIZE = 5;
+const soundPool = Array.from({ length: SOUND_POOL_SIZE }, () => {
+  const audio = new Audio('boop.mp3');
+  audio.volume = 0.3;
+  return audio;
+});
+let currentSound = 0;
+
+function playCollisionSound() {
+    soundPool[currentSound].currentTime = 0;
+    soundPool[currentSound].play();
+    currentSound = (currentSound + 1) % SOUND_POOL_SIZE;
+}
+
+function playJumpSound() {
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+}
+
+function playDeathSound() {
+    deathSound.currentTime = 0;
+    deathSound.play();
+}
+
+function playHitSound() {
+    hitSound.currentTime = 0;
+    hitSound.play();
+}
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -311,6 +346,7 @@ class Game {
       if (this.checkCollision(this.player, coin)) {
         this.score += 10;
         document.getElementById('score').textContent = `Score: ${this.score}`;
+        playCollisionSound();
         return false;
       }
       return true;
@@ -357,6 +393,8 @@ class Game {
       document.getElementById('lives').textContent = `Lives: ${this.lives}`;
       if (this.lives <= 0) {
         this.player.die();
+      } else {
+        playHitSound();
       }
     }
   }
@@ -568,6 +606,7 @@ class Player {
         this.isJumping = true;
         this.jumpTime = 0;
         this.canJump = false;
+        playJumpSound();
       } else if (this.isJumping && this.jumpTime < this.maxJumpTime) {
         this.dy -= 0.5;  // Continue adding upward force
         this.jumpTime++;
@@ -661,6 +700,7 @@ class Player {
     this.isDying = true;
     this.dx = 0;
     this.dy = 0;
+    playDeathSound();
     setTimeout(() => this.game.resetGame(), 1000); // Reset game after 1 second
   }
 }
