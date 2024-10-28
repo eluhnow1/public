@@ -214,16 +214,15 @@ class Asteroid {
       this.y = Math.random() * (window.innerHeight - ASTEROID_SIZE);
     } while (this.checkOverlap());
     
-    const speed = 2;
+    // Remove the speed constant - let initial speed be higher
     const angle = Math.random() * Math.PI * 2;
-    this.dx = Math.cos(angle) * speed;
-    this.dy = Math.sin(angle) * speed;
+    this.dx = Math.cos(angle) * 5; // Increased from 2 to 5 for initial speed
+    this.dy = Math.sin(angle) * 5;
     
     this.trail = [];
     this.updatePosition();
     this.updateRotation();
   }
-
   checkOverlap() {
     for (let asteroid of asteroids) {
       const dx = this.x - asteroid.x;
@@ -250,7 +249,7 @@ class Asteroid {
     let newY = this.y + this.dy;
     let collisionOccurred = false;
 
-    // Wall collisions
+    // Wall collisions - no speed normalization
     if (newX + ASTEROID_SIZE > window.innerWidth || newX < 0) {
       this.dx = -this.dx;
       newX = this.x + this.dx;
@@ -262,7 +261,7 @@ class Asteroid {
       collisionOccurred = true;
     }
 
-    // Line collisions
+    // Line collisions - remove speed normalization
     for (let line of lines) {
       if (this.lineCircleCollision(line, newX + ASTEROID_SIZE/2, newY + ASTEROID_SIZE/2, ASTEROID_SIZE/2)) {
         const nx = line.y2 - line.y1;
@@ -274,6 +273,7 @@ class Asteroid {
         this.dx -= 2 * dotProduct * unitNormal.x;
         this.dy -= 2 * dotProduct * unitNormal.y;
         
+        // Remove velocity normalization here
         newX = this.x + this.dx;
         newY = this.y + this.dy;
         collisionOccurred = true;
@@ -281,14 +281,13 @@ class Asteroid {
       }
     }
 
-    // Asteroid-to-asteroid collisions
+    // Asteroid-to-asteroid collisions - remove speed normalization
     for (let asteroid of asteroids) {
       if (asteroid === this) continue;
       const dx = newX - asteroid.x;
       const dy = newY - asteroid.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (distance < ASTEROID_SIZE) {
-        // Collision detected, calculate new velocities
         const angle = Math.atan2(dy, dx);
         const sin = Math.sin(angle);
         const cos = Math.cos(angle);
@@ -299,7 +298,7 @@ class Asteroid {
         const vx2 = asteroid.dx * cos + asteroid.dy * sin;
         const vy2 = asteroid.dy * cos - asteroid.dx * sin;
 
-        // Swap velocities
+        // Swap velocities without normalization
         [this.dx, asteroid.dx] = [vx2 * cos - vy1 * sin, vx1 * cos - vy2 * sin];
         [this.dy, asteroid.dy] = [vy1 * cos + vx2 * sin, vy2 * cos + vx1 * sin];
 
