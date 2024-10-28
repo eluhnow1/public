@@ -129,13 +129,16 @@ class Game {
         const sectionMinY = minY + i * sectionHeight;
         const sectionMaxY = sectionMinY + sectionHeight;
         
-        // Reduced chance for box platforms
         let platformType = 'normal';
-        if (this.level >= 2 && Math.random() < 0.15) { // Reduced from typical 0.5
+        if (this.level >= 2 && Math.random() < 0.15) {
           platformType = 'box';
         }
         if (this.level >= 3 && Math.random() < 0.3) {
           platformType = 'stairs';
+        }
+        // Add lava platforms after level 10
+        if (this.level >= 10 && Math.random() < 0.2) {
+          platformType = 'lava';
         }
 
         let width, height;
@@ -237,23 +240,28 @@ class Game {
   }
 
   createEnemyByType(type, platform) {
-    if (platform.type === 'box') return null;
+    if (platform.type === 'box' || platform.type === 'lava') return null;
   
     const y = platform.y - this.enemySize - 5;
-    // Remove the padding (30px) from bounds calculations
-    const leftBound = platform.x;                    // Changed from platform.x + 30
-    const rightBound = platform.x + platform.width;  // Changed from platform.width - 30
+    const leftBound = platform.x;
+    const rightBound = platform.x + platform.width;
     const x = platform.x + platform.width / 2 - this.enemySize / 2;
+  
+    // Calculate speed multiplier based on level
+    const speedMultiplier = Math.min(1 + (this.level - 1) * 0.05, 2.5); // Caps at 2.5x speed
+    const baseSpeed = this.enemySpeed * speedMultiplier;
   
     switch(type) {
       case 'basic':
-        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed); // Subtract enemySize from rightBound
+        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', baseSpeed);
       case 'fast':
-        return new Enemy(x, y, leftBound, rightBound, '#e67e22', this.enemySpeed * 2); // Subtract enemySize from rightBound
+        return new Enemy(x, y, leftBound, rightBound, '#e67e22', baseSpeed * 1.5);
       case 'hunter':
-        return new HunterEnemy(x, y, this.player, '#c0392b', this.enemySpeed * 0.75);
+        // Cap hunter speed at player's speed (7)
+        const hunterSpeed = Math.min(baseSpeed * 0.75, 7);
+        return new HunterEnemy(x, y, this.player, '#c0392b', hunterSpeed);
       default:
-        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', this.enemySpeed); // Subtract enemySize from rightBound
+        return new Enemy(x, y, leftBound, rightBound, '#e74c3c', baseSpeed);
     }
   }
 
@@ -363,6 +371,12 @@ class Game {
       }
       return true;
     });
+
+    this.platforms.forEach(platform => {
+      if (platform.type === 'lava' && this.checkCollision(this.player, platform)) {
+        this.playerHit();
+      }
+    });
     
     // Randomly spawn hearts
     if (this.lives < 3 && Math.random() < 0.001) { // 0.1% chance per frame
@@ -432,6 +446,10 @@ class Game {
       switch(platform.type) {
         case 'box':
           this.ctx.fillStyle = '#8e44ad';
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+          break;
+        case 'lava':
+          this.ctx.fillStyle = `rgba(231, 76, 60, ${0.7 + Math.sin(Date.now() / 200) * 0.3})`;
           this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
           break;
         case 'stairs':
@@ -705,15 +723,15 @@ class Player {
   }
 }
   
-  class Platform {
-    constructor(x, y, width, height) {
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.height = height;
-    }
+class Platform {
+  constructor(x, y, width, height, type = 'normal') {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.type = type;
   }
-  
+}
   class Coin {
     constructor(x, y, width = 30, height = 30) { // Changed from 20 to 30
       this.x = x;
